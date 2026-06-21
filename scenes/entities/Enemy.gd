@@ -67,9 +67,24 @@ func setup_monster_stats():
 		gold_reward = 5
 		loot_item = "slime_core"
 		loot_chance = 0.50
-		sprite.texture = load("res://assets/slime_v3.png")
+		sprite.texture = load("res://assets/slime_32x32_v3.png")
 		attack_range = 28.0
 		agro_range = 100.0
+	elif monster_id == "goblin":
+		monster_name = "Duende del Bosque"
+		level = 2
+		max_hp = 35.0
+		hp = max_hp
+		atk = 8
+		defense = 2
+		speed = 45.0
+		xp_reward = 40
+		gold_reward = 15
+		loot_item = "wolf_claw"
+		loot_chance = 0.40
+		sprite.texture = load("res://assets/characters.png")
+		attack_range = 26.0
+		agro_range = 120.0
 	elif monster_id == "skeleton":
 		monster_name = "Guerrero Esqueleto"
 		level = 3
@@ -82,7 +97,7 @@ func setup_monster_stats():
 		gold_reward = 25
 		loot_item = "steel_shield"
 		loot_chance = 0.15
-		sprite.texture = load("res://assets/skeleton_v3.png")
+		sprite.texture = load("res://assets/skeleton_32x32_v3.png")
 		attack_range = 30.0
 		agro_range = 140.0
 	elif monster_id == "boss":
@@ -97,7 +112,7 @@ func setup_monster_stats():
 		gold_reward = 250
 		loot_item = "demon_heart"
 		loot_chance = 1.0
-		sprite.texture = load("res://assets/demon_boss.png") # Usamos el original o uno nuevo si hubiera
+		sprite.texture = load("res://assets/demon_boss.png")
 		attack_range = 45.0
 		agro_range = 180.0
 	elif monster_id == "dummy":
