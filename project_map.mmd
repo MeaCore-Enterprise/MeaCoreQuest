@@ -1,0 +1,34 @@
+graph TD
+    subgraph "Core Gameplay (Epic 1)"
+        C1[Movimiento y Dash] --> C2[Combate Básico]
+        C2 --> C3[Sistema de Proyectiles]
+        C3 --> C4[Hit-stop y Pulido]
+    end
+
+    subgraph "Progresión y Personaje (Epic 2)"
+        P1[Clases y Atributos] --> P2[Subida de Nivel]
+        P2 --> P3[Sistema de Equipamiento]
+        P3 --> P4[Fórmulas de Daño]
+    end
+
+    subgraph "Mundo y Contenido (Epic 3)"
+        W1[Mapa Procedural] --> W2[IA de Enemigos]
+        W2 --> W3[Sistema de Misiones]
+        W3 --> W4[Arena de Boss]
+    end
+
+    subgraph "Interfaz y Audio (Epic 4)"
+        U1[HUD y Barras] --> U2[Inventario]
+        U2 --> U3[Sonido 8-bit]
+    end
+
+    C1 -.-> P1
+    C2 -.-> W2
+    P2 -.-> W3
+    W1 -.-> U1
+
+    style C1 fill:#f9f,stroke:#333,stroke-width:2px
+    style C2 fill:#f9f,stroke:#333,stroke-width:2px
+    style P1 fill:#bbf,stroke:#333,stroke-width:2px
+    style W1 fill:#bfb,stroke:#333,stroke-width:2px
+    style U1 fill:#fbb,stroke:#333,stroke-width:2px

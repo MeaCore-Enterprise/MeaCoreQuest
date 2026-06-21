@@ -1,0 +1,48 @@
+direction: right
+
+Combat: "Epic 1: Combate & Core" {
+  shape: rectangle
+  style: {
+    fill: "#e1f5fe"
+    stroke: "#01579b"
+  }
+}
+
+Progression: "Epic 2: Progresión & RPG" {
+  shape: rectangle
+  style: {
+    fill: "#e1f5fe"
+    stroke: "#01579b"
+  }
+}
+
+S1: "Sprint 1: Fundamentos\n(Movimiento & Dash)" {
+  shape: package
+  style: {
+    fill: "#e8f5e9"
+    stroke: "#2e7d32"
+  }
+}
+
+S2: "Sprint 2: Progresión\n(Stats & Slimes)" {
+  shape: package
+  style: {
+    fill: "#e8f5e9"
+    stroke: "#2e7d32"
+  }
+}
+
+S3: "Sprint 3: Habilidades\n(Skills & Proyectiles)" {
+  shape: package
+  style: {
+    fill: "#e8f5e9"
+    stroke: "#2e7d32"
+  }
+}
+
+Combat -> S1: "Core mechanics"
+Progression -> S2: "RPG systems"
+Combat -> S3: "Advanced combat"
+
+S1 -> S2: "Next phase"
+S2 -> S3: "Expansion"

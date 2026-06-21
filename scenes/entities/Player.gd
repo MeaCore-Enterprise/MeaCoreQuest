@@ -71,15 +71,19 @@ func _ready():
 			weapon_node.weapon_shape = "bow"
 
 func setup_class_graphics():
+	# Carga de nuevos sprites v3
 	if GameManager.player_class == "Warrior":
-		class_x_offset = 0
-		class_y_offset = 0
+		sprite.texture = load("res://assets/warrior_v3.png")
 	elif GameManager.player_class == "Mage":
-		class_x_offset = 96
-		class_y_offset = 0
+		sprite.texture = load("res://assets/mage_v3.png")
 	elif GameManager.player_class == "Archer":
-		class_x_offset = 192
-		class_y_offset = 0
+		sprite.texture = load("res://assets/archer_v3.png")
+	
+	# Las nuevas hojas generadas por AI tienen un layout diferente. 
+	# Para simplificar y que sea funcional, asumimos un grid de 32x32.
+	# Si la hoja es 1920x1920, cada frame es grande. 
+	# Pero en Godot, si configuramos el Sprite2D con Region activado:
+	sprite.region_enabled = true
 	update_sprite_rect()
 
 func _input(event):
@@ -143,34 +147,26 @@ func _physics_process(delta):
 	if Input.is_action_just_pressed("dash") and dash_cd_timer <= 0.0 and direction.length() > 0 and not is_dashing and not is_dead:
 		_start_dash(direction)
 
-	# Skill inputs with edge detection
+	# Skill inputs
 	var k1 = Input.is_physical_key_pressed(KEY_1)
 	var k2 = Input.is_physical_key_pressed(KEY_2)
 	var k3 = Input.is_physical_key_pressed(KEY_3)
 
-	if k1 and not key_1_held:
-		cast_skill(0)
-	if k2 and not key_2_held:
-		cast_skill(1)
-	if k3 and not key_3_held:
-		cast_skill(2)
+	if k1 and not key_1_held: cast_skill(0)
+	if k2 and not key_2_held: cast_skill(1)
+	if k3 and not key_3_held: cast_skill(2)
 
 	key_1_held = k1
 	key_2_held = k2
 	key_3_held = k3
 
-	# Space = basic attack
-	if Input.is_action_just_pressed("basic_attack"):
-		cast_skill(0)
-
-	# Tab = cycle target
-	if Input.is_action_just_pressed("cycle_target"):
-		_cycle_target()
+	if Input.is_action_just_pressed("basic_attack"): cast_skill(0)
+	if Input.is_action_just_pressed("cycle_target"): _cycle_target()
 
 	velocity = direction * speed + knockback_velocity
 	move_and_slide()
 
-	# Animation
+	# Animation logic
 	if direction.length() > 0:
 		if abs(direction.x) > abs(direction.y):
 			current_dir = 3 if direction.x > 0 else 2
@@ -179,7 +175,7 @@ func _physics_process(delta):
 		anim_timer += delta
 		if anim_timer >= ANIM_SPEED:
 			anim_timer = 0.0
-			anim_frame = 1 if anim_frame == 2 else 2
+			anim_frame = (anim_frame + 1) % 4 # Las nuevas hojas tienen más frames
 	else:
 		anim_frame = 0
 		anim_timer = 0.0
@@ -192,6 +188,7 @@ func _get_attack_range() -> float:
 func _start_dash(dir: Vector2):
 	is_dashing = true
 	dash_dir = dir.normalized()
+	dash_duration = 0.15
 	dash_timer = dash_duration
 	is_invulnerable = true
 	dash_cd_timer = dash_cooldown
@@ -220,8 +217,7 @@ func _cycle_target():
 	for e in enemies:
 		if not e.is_dead and is_instance_valid(e):
 			alive.append(e)
-	if alive.size() == 0:
-		return
+	if alive.size() == 0: return
 	if not is_instance_valid(GameManager.target) or GameManager.target == null:
 		GameManager.target = alive[0]
 		return
@@ -232,78 +228,63 @@ func _cycle_target():
 		GameManager.target = alive[idx + 1]
 
 func update_sprite_rect():
-	var frame_x = class_x_offset + anim_frame * 32
-	var frame_y = class_y_offset + current_dir * 32
-	sprite.region_rect = Rect2(frame_x, frame_y, 32, 32)
+	# Ajuste para las nuevas hojas de sprites (1920x1920, frames de ~240px)
+	# Como redimensionamos a 32x32 para el proyecto, usamos 32.
+	var frame_size = 240 # Tamaño aproximado del frame en la hoja 1920/8
+	if sprite.texture:
+		var tex_w = sprite.texture.get_width()
+		frame_size = tex_w / 8
+	
+	var frame_x = anim_frame * frame_size
+	var frame_y = current_dir * frame_size
+	sprite.region_rect = Rect2(frame_x, frame_y, frame_size, frame_size)
+	# Escalamos el sprite para que se vea de tamaño normal en el juego (aprox 32x32 en pantalla)
+	sprite.scale = Vector2(32.0 / frame_size, 32.0 / frame_size)
 
 func cast_skill(skill_idx: int):
-	if is_dead or is_dashing:
-		return
-	if skill_idx >= GameManager.skills.size():
-		return
-
+	if is_dead or is_dashing: return
+	if skill_idx >= GameManager.skills.size(): return
 	var skill = GameManager.skills[skill_idx]
-	if attack_cooldowns[skill_idx] > 0.0:
-		return
+	if attack_cooldowns[skill_idx] > 0.0: return
 	if GameManager.mp < skill["mp_cost"]:
 		GameManager.add_chat_msg("[Sistema]", "¡No tienes suficiente Maná!", Color(0.4, 0.6, 1.0))
 		return
-
 	var current_target = GameManager.target
 	if not is_instance_valid(current_target) or current_target == null or not current_target.is_in_group("enemy") or current_target.is_dead:
 		current_target = get_nearest_enemy()
-		if current_target:
-			GameManager.target = current_target
+		if current_target: GameManager.target = current_target
 		else:
 			GameManager.add_chat_msg("[Sistema]", "Necesitas un objetivo para atacar.", Color(1.0, 0.3, 0.3))
 			return
-
 	var dist = global_position.distance_to(current_target.global_position)
-	var req_range = _get_attack_range()
-	if dist > req_range:
-		return
-
+	if dist > _get_attack_range(): return
 	GameManager.mp -= skill["mp_cost"]
 	attack_cooldowns[skill_idx] = skill["cooldown"]
 	GameManager.skills[skill_idx]["current_cooldown"] = skill["cooldown"]
 	GameManager.player_stats_changed.emit()
-
 	var attack_dir = (current_target.global_position - global_position).normalized()
 	_play_weapon_swing(attack_dir)
-
-	if GameManager.player_class == "Warrior":
-		SoundManager.play_sfx("hit")
-	else:
-		SoundManager.play_sfx("spell")
-
+	if GameManager.player_class == "Warrior": SoundManager.play_sfx("hit")
+	else: SoundManager.play_sfx("spell")
 	execute_skill_effect(skill, current_target, attack_dir)
-
-	if skill_idx == 0:
-		_register_combo_hit()
+	if skill_idx == 0: _register_combo_hit()
 
 func _play_weapon_swing(attack_dir: Vector2):
-	if is_swinging:
-		return
+	if is_swinging: return
 	is_swinging = true
-
 	weapon_node.position = attack_dir * 14.0
 	weapon_node.rotation = attack_dir.angle()
 	weapon_node.visible = true
 	weapon_node.modulate.a = 1.0
 	weapon_node.scale = Vector2.ONE
-	weapon_node.queue_redraw()
-
 	var tween = create_tween().set_parallel()
 	tween.tween_property(weapon_node, "rotation", weapon_node.rotation + 1.8, 0.08)
 	tween.tween_property(weapon_node, "scale", Vector2(0.5, 0.5), 0.08)
 	tween.tween_property(weapon_node, "modulate:a", 0.0, 0.08).set_delay(0.06)
 	tween.finished.connect(func():
 		weapon_node.visible = false
-		weapon_node.rotation = 0.0
-		weapon_node.modulate.a = 1.0
 		is_swinging = false
 	, CONNECT_ONE_SHOT)
-
 	var punch = create_tween()
 	punch.tween_property(sprite, "offset", attack_dir * 6.0, 0.06)
 	punch.tween_property(sprite, "offset", Vector2.ZERO, 0.06)
@@ -313,46 +294,33 @@ func _register_combo_hit():
 	comboTimer = COMBO_WINDOW
 	GameManager.current_combo = combo_count
 	GameManager.combo_changed.emit(combo_count)
-
 	if combo_count >= 2:
-		var msg = "Hit x" + str(combo_count) + "!"
-		GameManager.add_chat_msg("[Combo]", msg, Color(1.0, 0.7, 0.1))
+		GameManager.add_chat_msg("[Combo]", "Hit x" + str(combo_count) + "!", Color(1.0, 0.7, 0.1))
 
 func _reset_combo():
 	combo_count = 0
-	comboTimer = 0.0
 	GameManager.current_combo = 0
 	GameManager.combo_changed.emit(0)
 
 func get_combo_multiplier() -> float:
-	if combo_count == 0:
-		return 1.0
-	return COMBO_MULTIPLIERS[combo_count - 1]
+	return COMBO_MULTIPLIERS[combo_count - 1] if combo_count > 0 else 1.0
 
 func execute_skill_effect(skill: Dictionary, target_node: Node, attack_dir: Vector2):
 	var combo_mult = 1.0 if skill["mp_cost"] > 0 else get_combo_multiplier()
 	var damage = int((GameManager.atk * skill["multiplier"] * combo_mult) - target_node.defense)
 	damage = max(1, damage)
-
 	var is_crit = randf() < 0.15
-	if is_crit:
-		damage = int(damage * 1.5)
-
-	var is_melee = GameManager.player_class == "Warrior"
-
-	if is_melee:
+	if is_crit: damage = int(damage * 1.5)
+	if GameManager.player_class == "Warrior":
 		target_node.take_damage(damage, is_crit)
 		GameManager.play_effect.emit(skill["effect"], target_node.global_position)
-		if is_instance_valid(target_node):
-			target_node.apply_knockback(attack_dir * 60.0)
+		if is_instance_valid(target_node): target_node.apply_knockback(attack_dir * 60.0)
 		_trigger_hit_stop()
 	else:
 		var proj_scene = load("res://scenes/entities/Projectile.tscn")
 		var proj = proj_scene.instantiate()
-		if skill["effect"] == "atk_fireball":
-			proj.aoe_radius = 40.0
-		elif skill["effect"] == "atk_poison":
-			proj.piercing = true
+		if skill["effect"] == "atk_fireball": proj.aoe_radius = 40.0
+		elif skill["effect"] == "atk_poison": proj.piercing = true
 		proj.global_position = global_position
 		proj.setup(target_node, damage, is_crit, skill["effect"])
 		get_parent().add_child(proj)
@@ -360,32 +328,25 @@ func execute_skill_effect(skill: Dictionary, target_node: Node, attack_dir: Vect
 
 func _trigger_hit_stop():
 	Engine.time_scale = 0.0
-	for _i in range(3):
-		await get_tree().process_frame
+	for _i in range(3): await get_tree().process_frame
 	Engine.time_scale = 1.0
 
 func take_damage(amount: int):
-	if is_invulnerable or is_dead:
-		return
-
+	if is_invulnerable or is_dead: return
 	var dmg = max(1, amount - GameManager.def)
 	GameManager.hp = max(0.0, GameManager.hp - dmg)
 	GameManager.show_damage_number.emit(global_position + Vector2(0, -12), str(dmg), Color(1.0, 0.2, 0.2))
 	shake_intensity = 6.0
-
 	var tween = create_tween()
 	tween.tween_property(sprite, "self_modulate", Color(1, 0.3, 0.3), 0.08)
 	tween.tween_property(sprite, "self_modulate", Color.WHITE, 0.08)
-
 	GameManager.player_stats_changed.emit()
 	SoundManager.play_sfx("hit")
-
-	if GameManager.hp <= 0:
-		die()
+	if GameManager.hp <= 0: die()
 
 func die():
 	is_dead = true
-	GameManager.add_chat_msg("[Sistema]", "¡Has muerto! Resucitas en la Aldea. Pierdes un 10% de tu oro.", Color(1.0, 0.1, 0.1))
+	GameManager.add_chat_msg("[Sistema]", "¡Has muerto! Resucitas en la Aldea.", Color(1.0, 0.1, 0.1))
 	GameManager.gold = int(GameManager.gold * 0.9)
 	GameManager.hp = GameManager.max_hp
 	GameManager.mp = GameManager.max_mp
@@ -399,8 +360,7 @@ func get_nearest_enemy() -> Node:
 	var nearest = null
 	var min_dist = 99999.0
 	for e in enemies:
-		if e.is_dead or not is_instance_valid(e):
-			continue
+		if e.is_dead or not is_instance_valid(e): continue
 		var d = global_position.distance_to(e.global_position)
 		if d < min_dist:
 			min_dist = d
