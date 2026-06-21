@@ -264,10 +264,15 @@ func cast_skill(skill_idx: int):
 	GameManager.player_stats_changed.emit()
 	var attack_dir = (current_target.global_position - global_position).normalized()
 	_play_weapon_swing(attack_dir)
-	if GameManager.player_class == "Warrior": SoundManager.play_sfx("hit")
-	else: SoundManager.play_sfx("spell")
-	execute_skill_effect(skill, current_target, attack_dir)
-	if skill_idx == 0: _register_combo_hit()
+	if GameManager.player_class == "Warrior":
+		SoundManager.play_sfx("hit")
+	else:
+		SoundManager.play_sfx("spell")
+
+	execute_skill_effect(skill, current_target, attack_dir, skill_idx)
+
+	if skill_idx == 0:
+		_register_combo_hit()
 
 func _play_weapon_swing(attack_dir: Vector2):
 	if is_swinging: return
@@ -305,8 +310,8 @@ func _reset_combo():
 func get_combo_multiplier() -> float:
 	return COMBO_MULTIPLIERS[combo_count - 1] if combo_count > 0 else 1.0
 
-func execute_skill_effect(skill: Dictionary, target_node: Node, attack_dir: Vector2):
-	var combo_mult = 1.0 if skill["mp_cost"] > 0 else get_combo_multiplier()
+func execute_skill_effect(skill: Dictionary, target_node: Node, attack_dir: Vector2, skill_idx: int = 0):
+	var combo_mult = get_combo_multiplier() if skill_idx == 0 else 1.0
 	var damage = int((GameManager.atk * skill["multiplier"] * combo_mult) - target_node.defense)
 	damage = max(1, damage)
 	var is_crit = randf() < 0.15
@@ -327,22 +332,34 @@ func execute_skill_effect(skill: Dictionary, target_node: Node, attack_dir: Vect
 		_trigger_hit_stop()
 
 func _trigger_hit_stop():
+	if is_dead:
+		return
 	Engine.time_scale = 0.0
-	for _i in range(3): await get_tree().process_frame
+	for _i in range(3):
+		await get_tree().process_frame
+		if is_dead:
+			Engine.time_scale = 1.0
+			return
 	Engine.time_scale = 1.0
 
 func take_damage(amount: int):
-	if is_invulnerable or is_dead: return
+	if is_invulnerable or is_dead:
+		return
+
 	var dmg = max(1, amount - GameManager.def)
 	GameManager.hp = max(0.0, GameManager.hp - dmg)
 	GameManager.show_damage_number.emit(global_position + Vector2(0, -12), str(dmg), Color(1.0, 0.2, 0.2))
 	shake_intensity = 6.0
+
 	var tween = create_tween()
 	tween.tween_property(sprite, "self_modulate", Color(1, 0.3, 0.3), 0.08)
 	tween.tween_property(sprite, "self_modulate", Color.WHITE, 0.08)
+
 	GameManager.player_stats_changed.emit()
-	SoundManager.play_sfx("hit")
-	if GameManager.hp <= 0: die()
+	SoundManager.play_sfx("hit", 1.2 if randi() % 5 == 0 else 1.0)
+
+	if GameManager.hp <= 0:
+		die()
 
 func die():
 	is_dead = true

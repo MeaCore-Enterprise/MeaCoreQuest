@@ -112,10 +112,10 @@ func _ready():
 	victory_panel.visible = false
 	tooltip_panel.visible = false
 	
-	# Connect Class Select buttons
-	$ClassSelectPanel/VBoxContainer/WarriorBtn.pressed.connect(func(): select_class("Warrior"))
-	$ClassSelectPanel/VBoxContainer/MageBtn.pressed.connect(func(): select_class("Mage"))
-	$ClassSelectPanel/VBoxContainer/ArcherBtn.pressed.connect(func(): select_class("Archer"))
+	var name_input = $ClassSelectPanel/VBoxContainer/NameInput
+	$ClassSelectPanel/VBoxContainer/WarriorBtn.pressed.connect(func(): select_class("Warrior", name_input.text.strip_edges()))
+	$ClassSelectPanel/VBoxContainer/MageBtn.pressed.connect(func(): select_class("Mage", name_input.text.strip_edges()))
+	$ClassSelectPanel/VBoxContainer/ArcherBtn.pressed.connect(func(): select_class("Archer", name_input.text.strip_edges()))
 	
 	# Connect Panel close buttons
 	$GameUI/InventoryPanel/CloseBtn.pressed.connect(func(): inventory_panel.visible = false)
@@ -127,6 +127,20 @@ func _ready():
 	# Connect Toggle HUD buttons
 	$GameUI/MenuButtons/BagBtn.pressed.connect(toggle_inventory)
 	$GameUI/MenuButtons/CharBtn.pressed.connect(toggle_character)
+
+	# Add volume toggle to MenuButtons
+	var vol_btn = Button.new()
+	vol_btn.text = "🔊"
+	vol_btn.flat = true
+	vol_btn.add_theme_font_size_override("font_size", 14)
+	vol_btn.mouse_entered.connect(func(): tooltip_panel.visible = false)
+	var muted = false
+	vol_btn.pressed.connect(func():
+		muted = not muted
+		SoundManager.set_volume(0.0 if muted else 1.0)
+		vol_btn.text = "🔇" if muted else "🔊"
+	)
+	$GameUI/MenuButtons.add_child(vol_btn)
 	
 	# Connect Hotbar potion buttons click
 	$GameUI/Hotbar/ItemHP.pressed.connect(func(): use_potion_by_id("hp_potion"))
@@ -151,17 +165,17 @@ func _process(delta):
 	if Input.is_action_just_pressed("use_mp_potion"):
 		use_potion_by_id("mp_potion")
 
-func select_class(cls: String):
-	GameManager.select_class(cls)
+func select_class(cls: String, player_name_str: String = "HeroePixel"):
+	if player_name_str == "":
+		player_name_str = "HeroePixel"
+	GameManager.select_class(cls, player_name_str)
 	class_select_panel.visible = false
 	game_ui_container.visible = true
-	
-	# Enable player movement in map
+
 	var player = get_tree().get_first_node_in_group("player")
 	if player:
 		player.set_physics_process(true)
-		
-	# Set Hotbar skill names
+
 	skill1_name_lbl.text = "1: " + GameManager.skills[0]["name"]
 	skill2_name_lbl.text = "2: " + GameManager.skills[1]["name"]
 	if GameManager.skills.size() > 2:
@@ -198,7 +212,7 @@ func update_player_hud():
 	mp_bar.value = GameManager.mp
 	mp_label.text = str(int(GameManager.mp)) + " / " + str(int(GameManager.max_mp))
 	
-	lvl_label.text = "Nivel " + str(GameManager.level)
+	lvl_label.text = "Nivel " + str(GameManager.level) + "  Pts:" + str(GameManager.stat_points)
 	name_label.text = GameManager.player_name + " (" + GameManager.player_class + ")"
 	
 	xp_bar.max_value = GameManager.xp_needed
@@ -312,18 +326,62 @@ func update_inventory_ui():
 			
 		inventory_grid.add_child(slot_btn)
 
-# Character Panel Rendering
 func update_character_ui():
 	char_class_lbl.text = GameManager.player_class
 	char_lvl_lbl.text = str(GameManager.level)
 	char_atk_lbl.text = str(GameManager.atk)
 	char_def_lbl.text = str(GameManager.def)
 	char_gold_lbl.text = str(GameManager.gold) + "g"
-	
-	# Setup equipped buttons
+
 	setup_equipped_button(eq_weapon_btn, "weapon")
 	setup_equipped_button(eq_armor_btn, "armor")
 	setup_equipped_button(eq_shield_btn, "shield")
+
+	_build_stat_alloc_ui()
+
+func _build_stat_alloc_ui():
+	var stats_box = $GameUI/CharacterPanel/StatsBox
+	for child in stats_box.get_children():
+		if child.has_meta("stat_row"):
+			child.queue_free()
+
+	var stats = [
+		{"key": "str", "label": "FUE", "val": GameManager.str, "color": Color(1.0, 0.4, 0.4)},
+		{"key": "dex", "label": "DES", "val": GameManager.dex, "color": Color(0.4, 1.0, 0.4)},
+		{"key": "intel", "label": "INT", "val": GameManager.intel, "color": Color(0.4, 0.6, 1.0)},
+		{"key": "vit", "label": "VIT", "val": GameManager.vit, "color": Color(1.0, 0.8, 0.4)},
+	]
+
+	var points_label = stats_box.get_node("PointsLabel")
+	points_label.text = "Puntos Disponibles: " + str(GameManager.stat_points)
+
+	var y_off = 180
+	for s in stats:
+		var lbl = Label.new()
+		lbl.set_meta("stat_row", true)
+		lbl.text = s["label"] + ": " + str(s["val"])
+		lbl.add_theme_color_override("font_color", s["color"])
+		lbl.add_theme_font_size_override("font_size", 10)
+		lbl.position = Vector2(10, y_off)
+		lbl.size = Vector2(80, 20)
+		stats_box.add_child(lbl)
+
+		var plus_btn = Button.new()
+		plus_btn.set_meta("stat_row", true)
+		plus_btn.text = "+"
+		plus_btn.add_theme_font_size_override("font_size", 12)
+		plus_btn.custom_minimum_size = Vector2(24, 20)
+		plus_btn.position = Vector2(100, y_off)
+		plus_btn.size = Vector2(24, 20)
+		var stat_key = s["key"]
+		plus_btn.pressed.connect(func():
+			GameManager.allocate_stat(stat_key)
+			update_character_ui()
+		)
+		plus_btn.disabled = GameManager.stat_points <= 0
+		stats_box.add_child(plus_btn)
+
+		y_off += 24
 
 func setup_equipped_button(btn: Button, slot: String):
 	# Clear old children
@@ -541,32 +599,36 @@ func update_shop_ui():
 			q_btn.disabled = true
 		shop_buy_container.add_child(q_btn)
 
-	# Populate BUY items
 	for item_id in buy_items:
 		var item = GameManager.items_db[item_id]
-		var hbox = HBoxContainer.new()
-		
+		var buy_btn = Button.new()
+		buy_btn.custom_minimum_size = Vector2(0, 28)
+		buy_btn.size_flags_horizontal = Control.SIZE_FILL
+		buy_btn.add_theme_font_size_override("font_size", 9)
+		buy_btn.alignment = HORIZONTAL_ALIGNMENT_LEFT
+
 		var icon_rect = TextureRect.new()
 		icon_rect.texture = AtlasTexture.new()
 		icon_rect.texture.atlas = load("res://assets/icons.png")
 		var coord = item["icon_coord"]
 		icon_rect.texture.region = Rect2(coord.x * 32, coord.y * 32, 32, 32)
 		icon_rect.custom_minimum_size = Vector2(24, 24)
-		hbox.add_child(icon_rect)
-		
+		icon_rect.position = Vector2(4, 2)
+		buy_btn.add_child(icon_rect)
+
 		var name_lbl = Label.new()
-		name_lbl.text = item["name"] + " (" + str(item["value"]) + "g)"
+		name_lbl.text = item["name"]
 		name_lbl.add_theme_font_size_override("font_size", 9)
-		name_lbl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		name_lbl.autowrap_mode = TextServer.AUTOWRAP_OFF
-		name_lbl.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
-		name_lbl.max_width_chars = 18
-		hbox.add_child(name_lbl)
-		
-		var buy_btn = Button.new()
-		buy_btn.text = "Comprar"
-		buy_btn.add_theme_font_size_override("font_size", 8)
-		buy_btn.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+		name_lbl.position = Vector2(32, 4)
+		buy_btn.add_child(name_lbl)
+
+		var price_lbl = Label.new()
+		price_lbl.text = str(item["value"]) + "g"
+		price_lbl.add_theme_font_size_override("font_size", 8)
+		price_lbl.add_theme_color_override("font_color", Color(1.0, 0.85, 0.1))
+		price_lbl.position = Vector2(140, 4)
+		buy_btn.add_child(price_lbl)
+
 		buy_btn.pressed.connect(func():
 			if GameManager.gold >= item["value"]:
 				var ok = GameManager.add_item_to_inventory(item_id)
@@ -578,9 +640,7 @@ func update_shop_ui():
 			else:
 				GameManager.add_chat_msg("[Mercader]", "¡No tienes suficiente oro!", Color(1.0, 0.4, 0.4))
 		)
-		hbox.add_child(buy_btn)
-		
-		shop_buy_container.add_child(hbox)
+		shop_buy_container.add_child(buy_btn)
 		
 	# Populate SELL items (from current inventory)
 	if GameManager.inventory.size() == 0:
@@ -592,32 +652,37 @@ func update_shop_ui():
 	else:
 		for i in range(GameManager.inventory.size()):
 			var item = GameManager.inventory[i]
-			var sell_val = int(item["value"] * 0.6) # sell for 60%
-			
-			var hbox = HBoxContainer.new()
+			var sell_val = int(item["value"] * 0.6)
+
+			var sell_btn = Button.new()
+			sell_btn.custom_minimum_size = Vector2(0, 28)
+			sell_btn.size_flags_horizontal = Control.SIZE_FILL
+			sell_btn.add_theme_font_size_override("font_size", 9)
+			sell_btn.alignment = HORIZONTAL_ALIGNMENT_LEFT
+
 			var icon_rect = TextureRect.new()
 			icon_rect.texture = AtlasTexture.new()
 			icon_rect.texture.atlas = load("res://assets/icons.png")
 			var coord = item["icon_coord"]
 			icon_rect.texture.region = Rect2(coord.x * 32, coord.y * 32, 32, 32)
 			icon_rect.custom_minimum_size = Vector2(24, 24)
-			hbox.add_child(icon_rect)
-			
+			icon_rect.position = Vector2(4, 2)
+			sell_btn.add_child(icon_rect)
+
 			var name_lbl = Label.new()
 			var qty_str = " x%d" % item["quantity"] if item["quantity"] > 1 else ""
-			name_lbl.text = item["name"] + qty_str + " (+" + str(sell_val) + "g)"
+			name_lbl.text = item["name"] + qty_str
 			name_lbl.add_theme_font_size_override("font_size", 9)
-			name_lbl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-			name_lbl.autowrap_mode = TextServer.AUTOWRAP_OFF
-			name_lbl.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
-			name_lbl.max_width_chars = 16
-			hbox.add_child(name_lbl)
-			
-			var sell_btn = Button.new()
-			sell_btn.text = "Vender"
-			sell_btn.add_theme_font_size_override("font_size", 8)
-			sell_btn.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
-			
+			name_lbl.position = Vector2(32, 4)
+			sell_btn.add_child(name_lbl)
+
+			var price_lbl = Label.new()
+			price_lbl.text = "+" + str(sell_val) + "g"
+			price_lbl.add_theme_font_size_override("font_size", 8)
+			price_lbl.add_theme_color_override("font_color", Color(0.3, 1.0, 0.3))
+			price_lbl.position = Vector2(140, 4)
+			sell_btn.add_child(price_lbl)
+
 			var idx = i
 			sell_btn.pressed.connect(func():
 				GameManager.gold += sell_val
@@ -626,8 +691,7 @@ func update_shop_ui():
 				GameManager.player_stats_changed.emit()
 				update_shop_ui()
 			)
-			hbox.add_child(sell_btn)
-			shop_sell_container.add_child(hbox)
+			shop_sell_container.add_child(sell_btn)
 
 # Styling Helpers
 func load_stylebox(bg_color: Color, border_color: Color = Color.TRANSPARENT) -> StyleBoxFlat:

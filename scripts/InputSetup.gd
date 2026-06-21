@@ -10,8 +10,8 @@ func _ready():
 	_setup_action("move_left", KEY_A, KEY_LEFT)
 	_setup_action("move_right", KEY_D, KEY_RIGHT)
 	# Potion keys
-	_setup_action("use_hp_potion", KEY_4)
-	_setup_action("use_mp_potion", KEY_5)
+	_setup_action("use_hp_potion", KEY_4, KEY_KP_4)
+	_setup_action("use_mp_potion", KEY_5, KEY_KP_5)
 
 func _setup_action(name: String, key1: Key, key2: Key = KEY_NONE):
 	if InputMap.has_action(name):

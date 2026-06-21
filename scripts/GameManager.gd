@@ -32,6 +32,13 @@ var def: int = 2
 var atk_speed: float = 1.0
 var current_combo: int = 0
 
+# Stat Allocation
+var stat_points: int = 0
+var str: int = 5
+var dex: int = 5
+var intel: int = 5
+var vit: int = 5
+
 # Target System
 var _target: Node = null
 var target: Node = null :
@@ -201,7 +208,7 @@ var items_db = {
 	},
 	"wolf_claw": {
 		"id": "wolf_claw",
-		"name": "Garra de Goblin",
+		"name": "Garra de Lobo",
 		"icon_coord": Vector2i(1, 3),
 		"type": "quest",
 		"rarity": "common",
@@ -297,23 +304,39 @@ var chat_phrases = [
 ]
 
 func _ready():
-	# Configure simulated chat timer
 	chat_timer = Timer.new()
-	chat_timer.wait_time = 12.0
+	chat_timer.wait_time = randf_range(8.0, 20.0)
 	chat_timer.one_shot = false
 	chat_timer.autostart = true
 	chat_timer.timeout.connect(_on_chat_timer_timeout)
 	add_child(chat_timer)
-	
-	# Initial server message
+
+	set_process(true)
+
 	call_deferred("add_chat_msg", "[Sistema]", "¡Bienvenido a Pixel MMORPG Simulator (MVP 1.0)! Habla con el Elder en la plaza para tu primera misión.", Color(1.0, 0.8, 0.2))
 
-# Initialize Player Class and Base Stats
-func select_class(selected: String):
+var _regen_timer: float = 0.0
+
+func _process(delta):
+	if player_class == "" or hp <= 0:
+		return
+	_regen_timer += delta
+	if _regen_timer >= 5.0:
+		_regen_timer = 0.0
+		if hp < max_hp:
+			hp = min(hp + 5.0, max_hp)
+			player_stats_changed.emit()
+		if mp < max_mp:
+			mp = min(mp + 3.0, max_mp)
+			player_stats_changed.emit()
+
+func select_class(selected: String, player_name_str: String = "HeroePixel"):
+	player_name = player_name_str
 	player_class = selected
+	stat_points = 3
 	inventory.clear()
 	equipped = {"weapon": null, "armor": null, "shield": null}
-	
+
 	if player_class == "Warrior":
 		max_hp = 65.0
 		hp = 65.0
@@ -322,11 +345,10 @@ func select_class(selected: String):
 		base_atk = 6
 		base_def = 4
 		atk_speed = 1.1
-		# Starter inventory
+		str = 8; dex = 4; intel = 3; vit = 7
 		add_item_to_inventory("rusty_sword")
 		add_item_to_inventory("hp_potion", 3)
 		add_item_to_inventory("mp_potion", 1)
-		# Skills
 		skills = [
 			{"name": "Ataque Básico", "mp_cost": 0, "cooldown": 1.0, "current_cooldown": 0.0, "multiplier": 1.0, "effect": "atk_melee"},
 			{"name": "Golpe Heroico", "mp_cost": 4, "cooldown": 4.0, "current_cooldown": 0.0, "multiplier": 1.8, "effect": "atk_slash"}
@@ -339,11 +361,10 @@ func select_class(selected: String):
 		base_atk = 8
 		base_def = 1
 		atk_speed = 1.3
-		# Starter inventory
+		str = 3; dex = 4; intel = 9; vit = 4
 		add_item_to_inventory("app_staff")
 		add_item_to_inventory("hp_potion", 2)
 		add_item_to_inventory("mp_potion", 3)
-		# Skills
 		skills = [
 			{"name": "Disparo Mágico", "mp_cost": 0, "cooldown": 1.2, "current_cooldown": 0.0, "multiplier": 0.8, "effect": "atk_spell"},
 			{"name": "Bola de Fuego", "mp_cost": 8, "cooldown": 5.0, "current_cooldown": 0.0, "multiplier": 2.2, "effect": "atk_fireball"}
@@ -356,64 +377,71 @@ func select_class(selected: String):
 		base_atk = 7
 		base_def = 2
 		atk_speed = 0.9
-		# Starter inventory
+		str = 4; dex = 9; intel = 3; vit = 5
 		add_item_to_inventory("short_bow")
 		add_item_to_inventory("hp_potion", 2)
 		add_item_to_inventory("mp_potion", 2)
-		# Skills
 		skills = [
 			{"name": "Disparo Rápido", "mp_cost": 0, "cooldown": 0.8, "current_cooldown": 0.0, "multiplier": 0.9, "effect": "atk_bow"},
 			{"name": "Flecha Tóxica", "mp_cost": 5, "cooldown": 5.0, "current_cooldown": 0.0, "multiplier": 1.4, "effect": "atk_poison"}
 		]
-		
-	# Equip starting weapon immediately
+
 	for i in range(inventory.size()):
 		if inventory[i]["type"] == "weapon":
 			equip_item(i)
 			break
-			
+
 	recalculate_stats()
 	player_stats_changed.emit()
 	inventory_changed.emit()
-	
-	add_chat_msg("[Sistema]", "Has entrado al juego como " + player_class + ". ¡Mucha suerte!", Color(0.2, 1.0, 0.4))
+
+	add_chat_msg("[Sistema]", "Bienvenido, " + player_name + ". Has entrado como " + player_class + ". ¡Mucha suerte!", Color(0.2, 1.0, 0.4))
+
+func allocate_stat(stat: String):
+	if stat_points <= 0:
+		return
+	match stat:
+		"str": str += 1
+		"dex": dex += 1
+		"intel": intel += 1
+		"vit": vit += 1
+		_: return
+	stat_points -= 1
+	recalculate_stats()
+	player_stats_changed.emit()
 
 # Recalculate stats based on level and equipment
 func recalculate_stats():
-	# Base increments per level
 	var lvl_bonus = level - 1
-	var class_hp_growth = 10.0 if player_class == "Warrior" else (5.0 if player_class == "Mage" else 7.0)
-	var class_mp_growth = 2.0 if player_class == "Warrior" else (8.0 if player_class == "Mage" else 4.0)
-	var class_atk_growth = 2 if player_class == "Mage" else (1 if player_class == "Warrior" else 2)
-	var class_def_growth = 1 if player_class == "Warrior" else 0
-	
-	var base_max_hp = 50.0 + lvl_bonus * class_hp_growth
-	var base_max_mp = 20.0 + lvl_bonus * class_mp_growth
-	
-	atk = base_atk + lvl_bonus * class_atk_growth
-	def = base_def + lvl_bonus * class_def_growth
-	max_hp = base_max_hp
-	max_mp = base_max_mp
-	
-	# Apply gear stats
+
+	var base_max_hp = 50.0 + vit * 5.0 + lvl_bonus * 5.0
+	var base_max_mp = 20.0 + intel * 3.0 + lvl_bonus * 2.0
+	var total_atk = base_atk + str * 1 + lvl_bonus * 1
+	var total_def = base_def + vit * 1 + lvl_bonus * 1
+
+	atk_speed = max(0.5, 1.0 - dex * 0.01)
+
 	for slot in equipped:
 		var eq_item = equipped[slot]
 		if eq_item != null and "stat_bonus" in eq_item:
 			for stat in eq_item["stat_bonus"]:
 				var val = eq_item["stat_bonus"][stat]
-				if stat == "atk":
-					atk += val
-				elif stat == "def":
-					def += val
-				elif stat == "max_hp":
-					max_hp += val
-				elif stat == "max_mp":
-					max_mp += val
-					
-	# Clamp health/mana within new bounds
-	hp = min(hp, max_hp)
-	mp = min(mp, max_mp)
-	
+				if stat == "atk": total_atk += val
+				elif stat == "def": total_def += val
+				elif stat == "max_hp": base_max_hp += val
+				elif stat == "max_mp": base_max_mp += val
+
+	var hp_ratio = hp / max_hp if max_hp > 0 else 1.0
+	var mp_ratio = mp / max_mp if max_mp > 0 else 1.0
+
+	atk = total_atk
+	def = total_def
+	max_hp = base_max_hp
+	max_mp = base_max_mp
+
+	hp = max(1.0, hp_ratio * max_hp) if hp > 0 else 0.0
+	mp = min(mp_ratio * max_mp, max_mp)
+
 	player_stats_changed.emit()
 
 func add_xp(amount: int):
@@ -427,6 +455,7 @@ func level_up():
 	xp -= xp_needed
 	level += 1
 	xp_needed = int(xp_needed * 1.5)
+	stat_points += 3
 	
 	# Level up unlocks skills
 	if level == 3:
@@ -515,31 +544,25 @@ func get_item_count(item_id: String) -> int:
 func equip_item(index: int):
 	if index < 0 or index >= inventory.size():
 		return
-		
+
 	var item = inventory[index]
 	if not item.has("type") or item["type"] == "consumable" or item["type"] == "quest":
 		return
-		
-	# Check class restriction
+
 	if item.has("class_req") and item["class_req"] != player_class:
 		add_chat_msg("[Sistema]", "Esta clase no puede equipar este objeto.", Color(1.0, 0.3, 0.3))
 		return
-		
-	var slot = item["type"] # weapon, armor, shield
-	
-	# Unequip current slot if occupied
+
+	var slot = item["type"]
+
 	if equipped[slot] != null:
-		var unequipped_item = equipped[slot]
-		equipped[slot] = null
-		# Add back to inventory (the item is currently at `index` which we are replacing, so we just modify it)
-		# Actually, simple slot swapping is:
-		# Put currently equipped into the array slot, and put inventory item into equipped slot
+		var old_item = equipped[slot]
 		equipped[slot] = item
-		inventory[index] = unequipped_item
+		inventory[index] = old_item
 	else:
 		equipped[slot] = item
 		inventory.remove_at(index)
-		
+
 	recalculate_stats()
 	inventory_changed.emit()
 	SoundManager.play_sfx("equip")
@@ -569,14 +592,17 @@ func use_item(index: int):
 		
 	var item = inventory[index]
 	if item["type"] == "consumable":
+		var heal_pos = global_position if has_node("/root/GameManager") else Vector2.ZERO
+		var player = get_tree().get_first_node_in_group("player")
+		if player: heal_pos = player.global_position
 		if item["effect"] == "heal_hp":
-			if hp >= max_hp: return # Already full
+			if hp >= max_hp: return
 			heal_player(item["power"])
-			show_damage_number.emit(target.global_position if target else Vector2.ZERO, "+" + str(item["power"]) + " HP", Color(0.2, 0.9, 0.2))
+			show_damage_number.emit(heal_pos, "+" + str(item["power"]) + " HP", Color(0.2, 0.9, 0.2))
 		elif item["effect"] == "heal_mp":
-			if mp >= max_mp: return # Already full
+			if mp >= max_mp: return
 			restore_mana(item["power"])
-			show_damage_number.emit(target.global_position if target else Vector2.ZERO, "+" + str(item["power"]) + " MP", Color(0.2, 0.5, 0.9))
+			show_damage_number.emit(heal_pos, "+" + str(item["power"]) + " MP", Color(0.2, 0.5, 0.9))
 			
 		remove_item_from_inventory(item["id"], 1)
 		
@@ -686,6 +712,6 @@ func add_chat_msg(sender: String, message: String, color: Color = Color.WHITE):
 func _on_chat_timer_timeout():
 	var sender = chat_names[randi() % chat_names.size()]
 	var msg = chat_phrases[randi() % chat_phrases.size()]
-	# Generate a random color for player name to look like a colorful MMO chat
 	var color = Color.from_hsv(randf(), 0.5, 0.95)
 	add_chat_msg(sender, msg, color)
+	chat_timer.wait_time = randf_range(8.0, 20.0)

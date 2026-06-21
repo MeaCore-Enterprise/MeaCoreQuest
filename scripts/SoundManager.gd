@@ -1,21 +1,18 @@
 extends Node
 
-# A pool of audio players for playing sound effects simultaneously
 var pool_size: int = 8
 var players: Array[AudioStreamPlayer] = []
 var current_player_idx: int = 0
+var master_volume: float = 1.0
 
-# Dictionary of pre-generated retro AudioStreams
 var sfx_streams: Dictionary = {}
 
 func _ready():
-	# Create the audio player pool
 	for i in range(pool_size):
 		var p = AudioStreamPlayer.new()
 		add_child(p)
 		players.append(p)
-		
-	# Generate sound streams
+
 	sfx_streams["hit"] = _generate_hit_sfx()
 	sfx_streams["heal"] = _generate_heal_sfx()
 	sfx_streams["mana"] = _generate_mana_sfx()
@@ -24,22 +21,26 @@ func _ready():
 	sfx_streams["equip"] = _generate_equip_sfx()
 	sfx_streams["spell"] = _generate_spell_sfx()
 
-# Play SFX by name
-func play_sfx(sfx_name: String):
+func set_volume(v: float):
+	master_volume = clamp(v, 0.0, 1.0)
+	for p in players:
+		p.volume_db = linear_to_db(master_volume)
+
+func play_sfx(sfx_name: String, pitch_scale: float = 1.0):
 	if not sfx_streams.has(sfx_name):
 		return
-		
-	# Find a player that isn't playing, or use the next in circle
+
 	var player = players[current_player_idx]
 	for p in players:
 		if not p.playing:
 			player = p
 			break
-			
+
 	player.stream = sfx_streams[sfx_name]
+	player.pitch_scale = pitch_scale
+	player.volume_db = linear_to_db(master_volume)
 	player.play()
-	
-	# Increment index to distribute players
+
 	current_player_idx = (current_player_idx + 1) % pool_size
 
 # Waveform Generation Helper

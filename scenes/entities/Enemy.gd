@@ -145,7 +145,10 @@ func _physics_process(delta):
 		var players = get_tree().get_nodes_in_group("player")
 		if players.size() > 0: player_node = players[0]
 	if knockback_velocity.length() > 0.0:
-		knockback_velocity = knockback_velocity.move_toward(Vector2.ZERO, knockback_friction * delta)
+		knockback_velocity = knockback_velocity.move_toward(Vector2.ZERO, knockback_friction * 60.0 * delta)
+		if knockback_velocity.length() < 5.0:
+			knockback_velocity = Vector2.ZERO
+
 	if current_state == State.STAGGER:
 		stagger_timer -= delta
 		if stagger_timer <= 0.0: current_state = State.CHASE
@@ -214,7 +217,8 @@ func _process_attack(delta):
 		player_node.take_damage(atk)
 
 func _is_in_safe_zone(pos: Vector2) -> bool:
-	return pos.x > -50 and pos.x < 650 and pos.y > -50 and pos.y < 650
+	# Town: tiles x=-10..30, y=-10..30 → pixels -160..480
+	return pos.x > -160 and pos.x < 480 and pos.y > -160 and pos.y < 480
 
 func _animate_movement(delta):
 	if velocity.length() > 2.0:
@@ -260,17 +264,34 @@ func take_damage(amount: int, is_crit: bool = false):
 func die():
 	is_dead = true
 	velocity = Vector2.ZERO
+
 	GameManager.gold += gold_reward
 	GameManager.add_xp(xp_reward)
+	GameManager.add_chat_msg("[Botín]", "Derrotas a " + monster_name + ". ¡Obtienes +" + str(gold_reward) + " Oro!", Color(0.9, 0.8, 0.2))
+
 	GameManager.track_kill(monster_id)
+
 	if loot_item != "" and randf() <= loot_chance:
-		GameManager.add_item_to_inventory(loot_item)
+		var ok = GameManager.add_item_to_inventory(loot_item)
+		if ok:
+			GameManager.add_chat_msg("[Botín]", "¡Has recogido [" + GameManager.items_db[loot_item]["name"] + "]!", Color(0.6, 0.8, 1.0))
+
+	var player = get_tree().get_first_node_in_group("player")
+	if player and player.has_method("_register_combo_hit"):
+		player._register_combo_hit()
+
 	var tween = create_tween()
 	tween.tween_property(sprite, "scale", Vector2.ZERO, 0.2)
+	tween.parallel().tween_property(sprite, "rotation", PI * 2, 0.2)
+
 	hp_bar.visible = false
 	name_label.visible = false
+
 	collision_shape.set_deferred("disabled", true)
-	if GameManager.target == self: GameManager.target = null
+
+	if GameManager.target == self:
+		GameManager.target = null
+
 	respawn_timer = respawn_time
 
 func _process_respawn(delta):

@@ -166,12 +166,28 @@ anchor_top = 0.5
 anchor_right = 0.5
 anchor_bottom = 0.5
 offset_left = -120.0
-offset_top = -30.0
+offset_top = -60.0
 offset_right = 120.0
 offset_bottom = 170.0
 grow_horizontal = 2
 grow_vertical = 2
-theme_override_constants/separation = 15
+theme_override_constants/separation = 12
+
+[node name="NameLabel" type="Label" parent="ClassSelectPanel/VBoxContainer"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.9, 0.9, 0.9, 1)
+theme_override_font_sizes/font_size = 12
+text = "Nombre del Personaje:"
+horizontal_alignment = 1
+
+[node name="NameInput" type="LineEdit" parent="ClassSelectPanel/VBoxContainer"]
+layout_mode = 2
+custom_minimum_size = Vector2(0, 30)
+theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_font_sizes/font_size = 14
+placeholder_text = "Ingresa tu nombre..."
+max_length = 16
+alignment = 1
 
 [node name="WarriorBtn" type="Button" parent="ClassSelectPanel/VBoxContainer"]
 layout_mode = 2
@@ -709,10 +725,10 @@ anchor_left = 0.5
 anchor_top = 0.5
 anchor_right = 0.5
 anchor_bottom = 0.5
-offset_left = -140.0
-offset_top = -140.0
-offset_right = 140.0
-offset_bottom = 140.0
+offset_left = -180.0
+offset_top = -200.0
+offset_right = 180.0
+offset_bottom = 200.0
 grow_horizontal = 2
 grow_vertical = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_dark")
@@ -724,7 +740,7 @@ offset_top = 8.0
 offset_right = 180.0
 offset_bottom = 24.0
 theme_override_colors/font_color = Color(1, 0.8, 0, 1)
-theme_override_font_sizes/font_size = 11
+theme_override_font_sizes/font_size = 12
 text = "HOJA DE PERSONAJE"
 
 [node name="CloseBtn" type="Button" parent="GameUI/CharacterPanel"]
@@ -744,15 +760,15 @@ text = "X"
 layout_mode = 0
 offset_left = 12.0
 offset_top = 35.0
-offset_right = 132.0
-offset_bottom = 265.0
+offset_right = 168.0
+offset_bottom = 380.0
 theme_override_styles/panel = SubResource("StyleBoxFlat_panel")
 
 [node name="Label" type="Label" parent="GameUI/CharacterPanel/StatsBox"]
 layout_mode = 0
 offset_left = 6.0
 offset_top = 6.0
-offset_right = 114.0
+offset_right = 150.0
 offset_bottom = 22.0
 theme_override_colors/font_color = Color(1, 0.9, 0.6, 1)
 theme_override_font_sizes/font_size = 10
@@ -770,9 +786,9 @@ text = "Clase:"
 
 [node name="ClassVal" type="Label" parent="GameUI/CharacterPanel/StatsBox"]
 layout_mode = 0
-offset_left = 62.0
+offset_left = 90.0
 offset_top = 28.0
-offset_right = 114.0
+offset_right = 150.0
 offset_bottom = 44.0
 theme_override_colors/font_color = Color(0.8, 0.9, 1.0, 1)
 theme_override_font_sizes/font_size = 9
@@ -790,9 +806,9 @@ text = "Nivel:"
 
 [node name="LvlVal" type="Label" parent="GameUI/CharacterPanel/StatsBox"]
 layout_mode = 0
-offset_left = 62.0
+offset_left = 90.0
 offset_top = 48.0
-offset_right = 114.0
+offset_right = 150.0
 offset_bottom = 64.0
 theme_override_colors/font_color = Color(1.0, 0.8, 0.0, 1)
 theme_override_font_sizes/font_size = 9
@@ -810,9 +826,9 @@ text = "Ataque:"
 
 [node name="AtkVal" type="Label" parent="GameUI/CharacterPanel/StatsBox"]
 layout_mode = 0
-offset_left = 62.0
+offset_left = 90.0
 offset_top = 78.0
-offset_right = 114.0
+offset_right = 150.0
 offset_bottom = 94.0
 theme_override_colors/font_color = Color(1.0, 0.3, 0.3, 1)
 theme_override_font_sizes/font_size = 9
@@ -830,9 +846,9 @@ text = "Defensa:"
 
 [node name="DefVal" type="Label" parent="GameUI/CharacterPanel/StatsBox"]
 layout_mode = 0
-offset_left = 62.0
+offset_left = 90.0
 offset_top = 98.0
-offset_right = 114.0
+offset_right = 150.0
 offset_bottom = 114.0
 theme_override_colors/font_color = Color(0.3, 0.9, 0.3, 1)
 theme_override_font_sizes/font_size = 9
@@ -842,22 +858,40 @@ horizontal_alignment = 2
 [node name="GoldLbl" type="Label" parent="GameUI/CharacterPanel/StatsBox"]
 layout_mode = 0
 offset_left = 8.0
-offset_top = 128.0
+offset_top = 118.0
 offset_right = 60.0
-offset_bottom = 144.0
+offset_bottom = 134.0
 theme_override_font_sizes/font_size = 9
 text = "Oro:"
 
 [node name="GoldVal" type="Label" parent="GameUI/CharacterPanel/StatsBox"]
 layout_mode = 0
-offset_left = 62.0
-offset_top = 128.0
-offset_right = 114.0
-offset_bottom = 144.0
+offset_left = 90.0
+offset_top = 118.0
+offset_right = 150.0
+offset_bottom = 134.0
 theme_override_colors/font_color = Color(1.0, 0.85, 0.2, 1)
 theme_override_font_sizes/font_size = 9
 text = "100g"
 horizontal_alignment = 2
+
+[node name="StatsSep" type="HSeparator" parent="GameUI/CharacterPanel/StatsBox"]
+layout_mode = 0
+offset_left = 8.0
+offset_top = 142.0
+offset_right = 150.0
+offset_bottom = 152.0
+
+[node name="PointsLabel" type="Label" parent="GameUI/CharacterPanel/StatsBox"]
+layout_mode = 0
+offset_left = 8.0
+offset_top = 156.0
+offset_right = 150.0
+offset_bottom = 172.0
+theme_override_colors/font_color = Color(0.2, 1.0, 0.8, 1)
+theme_override_font_sizes/font_size = 10
+text = "Puntos: 0"
+horizontal_alignment = 1
 
 [node name="EquipmentBox" type="Panel" parent="GameUI/CharacterPanel"]
 layout_mode = 0
@@ -977,10 +1011,10 @@ anchor_left = 0.5
 anchor_top = 0.5
 anchor_right = 0.5
 anchor_bottom = 0.5
-offset_left = -260.0
-offset_top = -160.0
-offset_right = 260.0
-offset_bottom = 160.0
+offset_left = -300.0
+offset_top = -200.0
+offset_right = 300.0
+offset_bottom = 200.0
 grow_horizontal = 2
 grow_vertical = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_dark")
@@ -989,10 +1023,10 @@ theme_override_styles/panel = SubResource("StyleBoxFlat_dark")
 layout_mode = 0
 offset_left = 12.0
 offset_top = 8.0
-offset_right = 300.0
-offset_bottom = 24.0
+offset_right = 350.0
+offset_bottom = 28.0
 theme_override_colors/font_color = Color(1.0, 0.85, 0.1, 1)
-theme_override_font_sizes/font_size = 11
+theme_override_font_sizes/font_size = 12
 text = "Tienda del Comerciante"
 
 [node name="CloseBtn" type="Button" parent="GameUI/ShopPanel"]
@@ -1012,34 +1046,36 @@ text = "X"
 layout_mode = 0
 offset_left = 12.0
 offset_top = 35.0
-offset_right = 250.0
-offset_bottom = 300.0
+offset_right = 288.0
+offset_bottom = 380.0
 theme_override_styles/panel = SubResource("StyleBoxFlat_panel")
 
 [node name="VBoxContainer" type="VBoxContainer" parent="GameUI/ShopPanel/BuyContainer"]
 layout_mode = 2
 size_flags_horizontal = 3
-theme_override_constants/separation = 10
+size_flags_vertical = 0
+theme_override_constants/separation = 6
 
 [node name="SellContainer" type="ScrollContainer" parent="GameUI/ShopPanel"]
 layout_mode = 0
-offset_left = 268.0
+offset_left = 300.0
 offset_top = 35.0
-offset_right = 506.0
-offset_bottom = 300.0
+offset_right = 576.0
+offset_bottom = 380.0
 theme_override_styles/panel = SubResource("StyleBoxFlat_panel")
 
 [node name="VBoxContainer" type="VBoxContainer" parent="GameUI/ShopPanel/SellContainer"]
 layout_mode = 2
 size_flags_horizontal = 3
-theme_override_constants/separation = 10
+size_flags_vertical = 0
+theme_override_constants/separation = 6
 
 [node name="TooltipPanel" type="Panel" parent="GameUI"]
 visible = false
 z_index = 50
 layout_mode = 0
-offset_right = 240.0
-offset_bottom = 160.0
+offset_right = 320.0
+offset_bottom = 240.0
 mouse_filter = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_dark")
 
