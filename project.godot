@@ -20,6 +20,7 @@ config/icon="res://assets/icons.png"
 GameManager="*res://scripts/GameManager.gd"
 SoundManager="*res://scripts/SoundManager.gd"
 InputSetup="*res://scripts/InputSetup.gd"
+DungeonManager="*res://scripts/DungeonManager.gd"
 
 [display]
 

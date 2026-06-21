@@ -33,10 +33,12 @@ var atk_speed: float = 1.0
 var current_combo: int = 0
 
 # Target System
+var _target: Node = null
 var target: Node = null :
+	get(): return _target
 	set(val):
-		target = val
-		target_changed.emit(target)
+		_target = val
+		target_changed.emit(_target)
 
 # Skills List
 var skills: Array = []
